@@ -21,8 +21,7 @@ public:
 	bool isEmpty();
 	bool add(Entry<T, K> *e);
 	bool del(K key);
-	typedef Entry<T, K> HTEntry;
-	Chain<HTEntry*> *first, *last;
+	Chain<struct Entry<T, K>*> *first, *last;
 private:
 	
 };

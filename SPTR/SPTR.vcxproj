@@ -146,7 +146,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Chain.h" />
-    <ClInclude Include="DLChain.h" />
+    <ClInclude Include="FHChain.h" />
     <ClInclude Include="FibonacciHeap.h" />
     <ClInclude Include="Hashtable.h" />
     <ClInclude Include="KeyList.h" />
@@ -156,7 +156,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Chain.cpp" />
-    <ClCompile Include="DLChain.cpp" />
+    <ClCompile Include="FHChain.cpp" />
     <ClCompile Include="FibonacciHeap.cpp" />
     <ClCompile Include="Hashtable.cpp" />
     <ClCompile Include="KeyList.cpp" />

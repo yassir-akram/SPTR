@@ -3,65 +3,29 @@
 
 #include "stdafx.h"
 
+#include "math.h"
 #include "RoadNetwork.h"
 #include "Hashtable.h"
 
 using namespace std;
 
-
-int hashCode(std::string mystr, int N);
-int hashCodeui(unsigned int n, int N);
-
 int main()
 {
-
+	const char * rfile = "C:\\Users\\Yassir\\Downloads\\RoadNetworks\\data\\France.in",
+				* pfile = "C:\\Users\\Yassir\\Downloads\\RoadNetworks\\vis\\points.js";
 	RoadNetwork rn;
-
-	ifstream myfile;
-	myfile.open("C:\\Users\\Yassir\\Downloads\\RoadNetworks\\data\\france.in");
-	
-	unsigned id;
-	int lat, lon;
-	unsigned int p1, p2;
-	int t;
-
-	if (myfile.is_open())
+	rn.readfromfile(rfile, 48.848096, 2.344330);
+	if (rn.Dijkstra(rn.select_vertex_id(470134)))
 	{
-		do
-		{
-			switch (myfile.get())
-			{
-			case 'v':
-				myfile >> id >> lat >> lon;
-				rn.addV(id, lat, lon);
-				break;
-			case 'a':
-				myfile >> p1 >> p2 >> t;
-				rn.addA(p1, p2, t);
-				break;
-			}
-			myfile.get();
-		} while (!myfile.eof());
+		system("PAUSE");
+		return 1;
 	}
-	myfile.close();
+	//rn.Dijkstra(rn.select_first());
+	rn.printinfile(pfile);
+	std::cout << "Done!" << endl;
 	
-	rn.Dijkstra(rn.select_first());
-
 	system("PAUSE");
 	return EXIT_SUCCESS;
-}
-
-int hashCode(std::string mystr, int N)
-{
-	int h = 0;
-	int n = mystr.size();
-	while (--n) h = (h + (mystr)[n]) % N;
-	return h;
-}
-
-int hashCodeui(unsigned int n, int N)
-{
-	return n%N;
 }
 
 

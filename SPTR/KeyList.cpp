@@ -10,7 +10,7 @@ return;
 template <typename T, typename K> Entry<T, K> *KeyList<T, K>::find(K key)
 {
 	int i = n;
-	Chain<HTEntry*> *c = first;
+	Chain<struct Entry<T, K>*> *c = first;
 	while (i--)
 	{
 		if (c->var->key == key) return c->var;
@@ -22,7 +22,7 @@ template <typename T, typename K> Entry<T, K> *KeyList<T, K>::find(K key)
 template <typename T, typename K> Entry<T, K> *KeyList<T, K>::pop()
 {
 	if (n == 0) return nullptr;
-	Chain<HTEntry*> *c = first;
+	Chain<struct Entry<T, K>*> *c = first;
 	Entry<T, K> *e = c->var;
 	first = first->next;
 	if (--n == 0) last = first;
@@ -38,14 +38,14 @@ template <typename T, typename K> bool KeyList<T, K>::isEmpty()
 template <typename T, typename K> bool KeyList<T, K>::add(Entry<T, K> *e)
 {
 	if (find(e->key)) return false;
-	first = new Chain<HTEntry*>(e, first);
+	first = new Chain<struct Entry<T, K>*>(e, first);
 	if (n++ == 0) last = first;
 	return true;
 }
 
 template <typename T, typename K> bool KeyList<T, K>::del(K key)
 {
-	Chain<HTEntry*> *c = first;
+	Chain<struct Entry<T, K>*> *c = first;
 	if (first->var->key == key)
 	{
 		first = first->next;
@@ -60,7 +60,7 @@ template <typename T, typename K> bool KeyList<T, K>::del(K key)
 		{
 			if (c->next->var->key == key)
 			{
-				Chain<HTEntry*> *cf = c->next;
+				Chain<struct Entry<T, K>*> *cf = c->next;
 				c = c->next;
 				c->next = cf->next;
 				delete cf;
