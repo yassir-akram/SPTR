@@ -9,7 +9,6 @@
 //}
 using namespace std;
 
-
 void RoadNetwork::readfromfile(const char* file, float latsr, float lonsr)
 {
 	time_t tb, te;
@@ -126,16 +125,15 @@ int RoadNetwork::Dijkstra(Vertex *sr)
 				int tu = vmin->t + c->var.t;
 				if (tu < to->t)	fh.set_pr(to, tu);
 			}
-			if (II)
+#if II
+			if (vmin->t < targetTime && to->t >= targetTime)
 			{
-				if (vmin->t < targetTime && to->t >= targetTime)
-				{
-					to->IIed = true;
-					to->lat = interpolation(vmin->lat, to->lat, vmin->t, to->t);
-					to->lon = interpolation(vmin->lon, to->lon, vmin->t, to->t);
-				}
-				else to->IIed = false;
+				to->IIed = true;
+				to->lat = interpolation(vmin->lat, to->lat, vmin->t, to->t);
+				to->lon = interpolation(vmin->lon, to->lon, vmin->t, to->t);
 			}
+			else to->IIed = false;
+#endif
 			c = c->next;
 		}
 	}
@@ -191,7 +189,7 @@ Vertex *RoadNetwork::select_vertex_coords(int lat, int lon)
 
 void RoadNetwork::printinfile(const char* file)
 {
-	std::cout << "Exporting points in file " << file << endl;
+	std::cout << "Exporting points to file " << file << endl;
 	ofstream myfile;
 	myfile.open(file);
 	myfile << endl << "var plottedPoints = [" << endl;

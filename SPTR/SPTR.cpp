@@ -20,7 +20,6 @@ int main()
 		system("PAUSE");
 		return 1;
 	}
-	//rn.Dijkstra(rn.select_first());
 	rn.printinfile(pfile);
 	std::cout << "Done!" << endl;
 	

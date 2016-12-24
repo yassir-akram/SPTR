@@ -7,6 +7,7 @@
 #include "KeyList.h"
 #include "time.h"
 
+
 struct Vertex
 {
 	unsigned int id;
