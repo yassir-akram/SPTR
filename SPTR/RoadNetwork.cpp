@@ -9,44 +9,73 @@
 //}
 using namespace std;
 
+
 void RoadNetwork::readfromfile(const char* file, float latsr, float lonsr)
 {
 	time_t tb, te;
 
 	std::cout << "Reading from file " << file << endl;
-	ifstream myfile;
+	
+	size_t length;
+	int fd = _open(file, O_RDONLY);
+	struct stat sb;
+	fstat(fd, &sb);
+	length = sb.st_size;
+
+	auto f = static_cast<const char*>(mmap(NULL, length, PROT_READ, MAP_PRIVATE, fd, 0u));
+	auto l = f + length;
 
 	unsigned int id, p1, p2;
 	int lon, lat, t;
 
-	myfile.open(file);
-	if (myfile.is_open())
-	{
-		time(&tb);
-		while (myfile.get() == 'v')
-		{
-			myfile >> id >> lon >> lat;
-			if (distang((float)lat / 1000000, (float)lon / 1000000, latsr, lonsr) <= 130.*2./6371.)
-				addVertex(id, lat, lon);
-			myfile.get();
-		}
-		myfile.unget();
-		time(&te);
-		std::cout << n << " vertexes added." << endl;
-		std::cout << "Ellapsed time: " << difftime(te, tb) << "s" << endl;
+	char *nb = new char[10];
+	char *cnb;
 
-		time(&tb);
-		while (myfile.get() == 'a')
-		{
-			myfile >> p1 >> p2 >> t;
-			addArc(p1, p2, t);
-			myfile.get();
-		}
-		time(&te);
-		std::cout << m << " arc added." << endl;
-		std::cout << "Ellapsed time: " << difftime(te, tb) << "s" << endl;
+	time(&tb);
+	while (*(f++) == 'v')
+	{
+		cnb = nb;
+		do { (*(cnb++) = *(++f)); } while (*f != ' ');
+		*cnb = '\0';
+		id = (unsigned int)stoul(nb, 0);
+		cnb = nb;
+		do { (*(cnb++) = *(++f)); } while (*f != ' ');
+		*cnb = '\0';
+		lon = atoi(nb);
+		cnb = nb;
+		do { (*(cnb++) = *(++f)); } while (*f != '\n');
+		*cnb = '\0';
+		lat = atoi(nb);
+		if (distang((float)lat / 1000000, (float)lon / 1000000, latsr, lonsr) <= 130.*2. / 6371.)
+			addVertex(id, lat, lon);
+		f++;
 	}
-	myfile.close();
+	f--;
+	time(&te);
+	std::cout << n << " vertexes added." << endl;
+	std::cout << "Ellapsed time: " << difftime(te, tb) << "s" << endl;
+
+	time(&tb);
+	while (*(f++) == 'a')
+	{
+		cnb = nb;
+		do { (*(cnb++) = *(++f)); } while (*f != ' ');
+		*cnb = '\0';
+		p1 = (unsigned int)stoul(nb, 0);
+		cnb = nb;
+		do { (*(cnb++) = *(++f)); } while (*f != ' ');
+		*cnb = '\0';
+		p2 = (unsigned int)stoul(nb, 0);
+		cnb = nb;
+		do { (*(cnb++) = *(++f)); } while (*f != '\n');
+		*cnb = '\0';
+		t = atoi(nb);
+		addArc(p1, p2, t);
+		f++;
+	}
+	time(&te);
+	std::cout << m << " arc added." << endl;
+	std::cout << "Ellapsed time: " << difftime(te, tb) << "s" << endl;
 }
 
 void RoadNetwork::addVertex(unsigned int id, int lat, int lon)
@@ -84,6 +113,7 @@ int RoadNetwork::Dijkstra(Vertex *sr)
 		for (Chain<struct Entry<struct Vertex, unsigned int>*> *c = E->first; c != nullptr; c = c->next)
 			c->var->value->computed = false;
 
+	//Processing sr
 	this->sr = sr;
 	sr->t = 0;
 	sr->computed = true;
@@ -113,7 +143,7 @@ int RoadNetwork::Dijkstra(Vertex *sr)
 
 		vmin->computed = true;
  		
-		//Computing neighbrs
+		//Processing neighbrs
 		Chain<Arc> *c = vmin->neighbors;
 		while (c != nullptr)
 		{

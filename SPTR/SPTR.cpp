@@ -14,7 +14,7 @@ int main()
 	const char * rfile = "C:\\Users\\Yassir\\Downloads\\RoadNetworks\\data\\France.in",
 				* pfile = "C:\\Users\\Yassir\\Downloads\\RoadNetworks\\vis\\points.js";
 	RoadNetwork rn;
-	rn.readfromfile(rfile, 48.848096, 2.344330);
+	rn.readfromfile(rfile, (float)48.848096, (float)2.344330);
 	if (rn.Dijkstra(rn.select_vertex_id(470134)))
 	{
 		system("PAUSE");

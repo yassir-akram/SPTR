@@ -7,6 +7,20 @@
 #include "KeyList.h"
 #include "time.h"
 
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <sstream>
+
+// for mmap:
+#include "mman.h"
+
+//#include <errno.h>
+#include <sys/stat.h>
+//#include <sys/types.h>
+#include <fcntl.h>
+#include <io.h>
+
 
 struct Vertex
 {
