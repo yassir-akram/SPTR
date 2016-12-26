@@ -1,7 +1,7 @@
 #pragma once
 #define phi (1 + sqrt(5)) / 2
 
-#include "RoadNetwork.h"
+#include "FHChain.h"
 
 template <typename T> class FibonacciHeap
 {
@@ -23,7 +23,6 @@ private:
 	FHChain<T*> **nodeDeg;
 	int nbnodes;
 	void print(FHChain<T*> *d, int i);
-	void clean(FHChain<T*> *c);
+	static void clean(FHChain<T*> *d);
 };
 
-template class FibonacciHeap<struct Vertex>;

@@ -46,3 +46,5 @@ template <typename T> void FHChain<T>::insertaslist(FHChain *&in)
 		in->prev = tmp;
 	}
 }
+
+template class FHChain<struct Vertex*>;

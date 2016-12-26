@@ -2,10 +2,15 @@
 #include "KeyList.h"
 
 
-/*template <typename T> KeyList<T,K>::~linkedList()
+template <typename T, typename K> KeyList<T,K>::~KeyList()
 {
-return;
-}*/
+	while (!isEmpty())
+	{
+		Entry<T, K> *e = pop();
+		delete e->value;
+		delete e;
+	}
+}
 
 template <typename T, typename K> Entry<T, K> *KeyList<T, K>::find(K key)
 {
@@ -72,4 +77,4 @@ template <typename T, typename K> bool KeyList<T, K>::del(K key)
 	return false;
 }
 
-template class KeyList<struct Vertex, int>;
+template class KeyList<struct Vertex, unsigned int>;

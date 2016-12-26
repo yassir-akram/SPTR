@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "RoadNetwork.h"
 
+
+
 #define II false
 #define targetTime 2*3600*1000
 
@@ -9,6 +11,16 @@
 //}
 using namespace std;
 
+Vertex::~Vertex()
+{
+	Chain<struct Arc> *next;
+	while (neighbors != nullptr)
+	{
+		next = neighbors->next;
+		delete neighbors;
+		neighbors = next;
+	}
+}
 
 void RoadNetwork::readfromfile(const char* file, float latsr, float lonsr)
 {
@@ -229,7 +241,7 @@ void RoadNetwork::printinfile(const char* file)
 		for (Chain<struct Entry<struct Vertex, unsigned int>*> *c = E->first; c != nullptr; c = c->next)
 		{
 			Vertex *u = c->var->value;
-			if (!II && targetTime - 60000 < u->t && u->t < targetTime + 60000 || II && u->IIed)
+			if (!II && targetTime - 10000 < u->t && u->t < targetTime + 10000 || II && u->IIed)
 				myfile << "\t[" << (float)u->lat / 1000000 << "," << (float)u->lon / 1000000 << "]," << endl;
 		}
 	}

@@ -8,10 +8,15 @@ template <typename T> FibonacciHeap<T>::~FibonacciHeap()
 	if (nodes != nullptr) clean(nodes);
 }
 
-template <typename T> void FibonacciHeap<T>::clean(FHChain<T*> *c)
+template <typename T> void FibonacciHeap<T>::clean(FHChain<T*> *d)
 {
-	if (c->childs != nullptr)clean(c->childs);
-	delete c;
+	FHChain<T*> *c = d;
+	do
+	{
+		if (c->childs != nullptr)clean(c->childs);
+		c = c->next;
+	} while (c != d);
+	delete d;
 }
 
 template <typename T> void FibonacciHeap<T>::add(T* el, int p)
@@ -62,6 +67,7 @@ template<> Vertex *FibonacciHeap<struct Vertex>::ext_min()
 	//Add min childs
 	minnode->unlink(nodes);
 	nbnodes--;
+	n--;
 
 	FHChain<struct Vertex*> *d = minnode->childs, *c = d;
 	if (d != nullptr)
@@ -170,3 +176,5 @@ template<> void FibonacciHeap<struct Vertex>::print()
 	std::cout << std::endl;
 	system("PAUSE");
 }
+
+template class FibonacciHeap<struct Vertex>;

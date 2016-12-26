@@ -1,4 +1,5 @@
 #pragma once
+
 template <typename T> class FHChain
 {
 public:
@@ -16,5 +17,5 @@ public:
 	bool marked;
 };
 
-template class FHChain<struct Vertex*>;
+
 

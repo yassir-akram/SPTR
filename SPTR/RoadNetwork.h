@@ -1,45 +1,41 @@
 #pragma once
 
-#include "Chain.h"
-#include "FHChain.h"
 #include "Hashtable.h"
 #include "FibonacciHeap.h"
-#include "KeyList.h"
+
 #include "time.h"
 
-#include <algorithm>
-#include <iostream>
-#include <cstring>
+//for stoul
 #include <sstream>
 
 // for mmap:
 #include "mman.h"
-
-//#include <errno.h>
-#include <sys/stat.h>
-//#include <sys/types.h>
+//#include <sys/stat.h>
 #include <fcntl.h>
 #include <io.h>
 
-
 struct Vertex
 {
+
 	unsigned int id;
 	int lat, lon;
 
 	int t;
 	bool computed;
 	Chain<struct Arc> *neighbors;
-	FHChain<struct Vertex*> *myFHc;
-	
+	FHChain<Vertex*> *myFHc;
+
 	//II
 	bool IIed;
 
 
 	Vertex(int id, int lat, int lon) : id(id), lat(lat), lon(lon), computed(false), neighbors(nullptr), myFHc(nullptr), t(0), IIed(false) {}
 	Vertex() {}
+
+	~Vertex();
 };
 
+typedef struct Arc Arc;
 struct Arc
 {
 	Vertex *to;
