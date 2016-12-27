@@ -22,6 +22,7 @@ struct Vertex
 
 	int t;
 	bool computed;
+	Vertex *prec;
 	Chain<struct Arc> *neighbors;
 	FHChain<Vertex*> *myFHc;
 
@@ -29,7 +30,7 @@ struct Vertex
 	bool IIed;
 
 
-	Vertex(int id, int lat, int lon) : id(id), lat(lat), lon(lon), computed(false), neighbors(nullptr), myFHc(nullptr), t(0), IIed(false) {}
+	Vertex(int id, int lat, int lon) : id(id), lat(lat), lon(lon), computed(false), neighbors(nullptr), myFHc(nullptr), t(0), IIed(false), prec(nullptr) {}
 	Vertex() {}
 
 	~Vertex();
@@ -55,6 +56,7 @@ public:
 	bool addArc(unsigned int frid, unsigned int toid, int t);
 	int Dijkstra(Vertex *sr);
 	void printinfile(const char* file);
+	void printroadto(Vertex *to, const char* file);
 	static float distang(float lata, float lona, float latb, float lonb);
 	int interpolation(int c1, int c2, int t1, int t2);
 

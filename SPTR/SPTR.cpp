@@ -7,10 +7,12 @@
 
 using namespace std;
 
-int main()
+int main(int argc, char *argv[])
 {
-	const char * rfile = "C:\\Users\\Yassir\\Downloads\\RoadNetworks\\data\\France.in",
-				* pfile = "C:\\Users\\Yassir\\Downloads\\RoadNetworks\\vis\\points.js";
+	if (argc == 1) return 255;
+	const char * rfile = argv[1],
+		*pfile = "points.js";
+	
 	
 	RoadNetwork *rn = new RoadNetwork;
 	rn->readfromfile(rfile, (float)48.848096, (float)2.344330);
@@ -18,7 +20,8 @@ int main()
 	if (sr != nullptr)
 	{
 		rn->Dijkstra(sr);
-		rn->printinfile(pfile);
+		rn->printroadto(rn->select_vertex_rand(), pfile);
+		//rn->printinfile(pfile);
 		std::cout << "Done!" << endl;
 	}
 	delete rn;

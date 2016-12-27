@@ -137,6 +137,7 @@ int RoadNetwork::Dijkstra(Vertex *sr)
 	Chain<Arc> *c = sr->neighbors;
 	while (c != nullptr)
 	{
+		c->var.to->prec = sr;
 		fh.add(c->var.to, c->var.t);
 		c = c->next;
 	}
@@ -148,7 +149,7 @@ int RoadNetwork::Dijkstra(Vertex *sr)
 	while (!fh.isEmpty())
 	{
 		Vertex *vmin = fh.ext_min();
-
+		
 		// Si on est déjà en dehors du cadre de nos recherches, on peut stopper l'exploration
 		if (vmin->t > (targetTime + (!II ? 60000 : 0)))
 			break;
@@ -160,13 +161,18 @@ int RoadNetwork::Dijkstra(Vertex *sr)
 		while (c != nullptr)
 		{
 			Vertex *to = c->var.to;
-			//if already in the heap
-			if (to->myFHc == nullptr) fh.add(to, vmin->t + c->var.t);
-			else if (!c->var.to->computed)
+			//if not in the heap
+			if (!c->var.to->computed)
 			{
-				int tu = vmin->t + c->var.t;
-				if (tu < to->t)	fh.set_pr(to, tu);
+				to->prec = vmin;
+				if (to->myFHc == nullptr) fh.add(to, vmin->t + c->var.t);
+				else
+				{
+					int tu = vmin->t + c->var.t;
+					if (tu < to->t)	fh.set_pr(to, tu);
+				}
 			}
+
 #if II
 			if (vmin->t < targetTime && to->t >= targetTime)
 			{
@@ -241,9 +247,30 @@ void RoadNetwork::printinfile(const char* file)
 		for (Chain<struct Entry<struct Vertex, unsigned int>*> *c = E->first; c != nullptr; c = c->next)
 		{
 			Vertex *u = c->var->value;
-			if (!II && targetTime - 10000 < u->t && u->t < targetTime + 10000 || II && u->IIed)
+			if (!II && ((targetTime - 20000 < u->t && u->t < targetTime + 20000) || (targetTime/2 - 10000 < u->t && u->t < targetTime/2 + 10000)) || II && u->IIed)
 				myfile << "\t[" << (float)u->lat / 1000000 << "," << (float)u->lon / 1000000 << "]," << endl;
 		}
+	}
+	myfile << "];" << endl;
+	myfile << endl << "var centralMarker =" << endl;
+	myfile << "\t[" << (float)sr->lat / 1000000 << "," << (float)sr->lon / 1000000 << "]" << endl;
+	myfile << ";" << endl;
+	myfile.close();
+}
+
+
+void RoadNetwork::printroadto(Vertex *to, const char* file)
+{
+	std::cout << "Exporting points to file " << file << endl;
+	ofstream myfile;
+	myfile.open(file);
+	myfile << endl << "var plottedPoints = [" << endl;
+	KeyList<struct Vertex, unsigned int> *E = ht.E;
+	
+	while (to != sr)
+	{
+		myfile << "\t[" << (float)to->lat / 1000000 << "," << (float)to->lon / 1000000 << "]," << endl;
+		to = to->prec;
 	}
 	myfile << "];" << endl;
 	myfile << endl << "var centralMarker =" << endl;
