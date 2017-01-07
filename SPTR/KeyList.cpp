@@ -66,7 +66,6 @@ template <typename T, typename K> bool KeyList<T, K>::del(K key)
 			if (c->next->var->key == key)
 			{
 				Chain<struct Entry<T, K>*> *cf = c->next;
-				c = c->next;
 				c->next = cf->next;
 				delete cf;
 				return true;

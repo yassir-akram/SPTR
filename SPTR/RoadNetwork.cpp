@@ -1,14 +1,10 @@
 #include "stdafx.h"
 #include "RoadNetwork.h"
 
-
-
-#define II false
-#define targetTime 2*3600*1000
-
 //RoadNetwork::~RoadNetwork()
 //{
 //}
+
 using namespace std;
 
 Vertex::~Vertex()
@@ -20,14 +16,21 @@ Vertex::~Vertex()
 		delete neighbors;
 		neighbors = next;
 	}
+
+	while (predecessors != nullptr)
+	{
+		next = predecessors->next;
+		delete predecessors;
+		predecessors = next;
+	}
 }
 
 void RoadNetwork::readfromfile(const char* file, float latsr, float lonsr)
 {
-	time_t tb, te;
+	clock_t ts, te;
 
 	std::cout << "Reading from file " << file << endl;
-	
+
 	size_t length;
 	int fd = _open(file, O_RDONLY);
 	struct stat sb;
@@ -43,7 +46,7 @@ void RoadNetwork::readfromfile(const char* file, float latsr, float lonsr)
 	char *nb = new char[10];
 	char *cnb;
 
-	time(&tb);
+	ts = clock();
 	while (*(f++) == 'v')
 	{
 		cnb = nb;
@@ -58,16 +61,20 @@ void RoadNetwork::readfromfile(const char* file, float latsr, float lonsr)
 		do { (*(cnb++) = *(++f)); } while (*f != '\n');
 		*cnb = '\0';
 		lat = atoi(nb);
-		if (distang((float)lat / 1000000, (float)lon / 1000000, latsr, lonsr) <= 130.*2. / 6371.)
+		// We only add the vertexes that are not too far from the source
+		// ie not further than the highest interest time (targetTime or targetTimeHigh, depending on 
+		// to which question we answer : represented by III) + 1 hour
+		// The travel time is estimated with : the segment length between the source and the point divided by 130 km/h
+		if (distang((float)lat / 1000000, (float)lon / 1000000, latsr, lonsr) <= 130.*((float)(III ? targetTimeHigh : targetTime) / 3600000. + 1.) / 6371.)
 			addVertex(id, lat, lon);
 		f++;
 	}
 	f--;
-	time(&te);
+	te = clock();
 	std::cout << n << " vertexes added." << endl;
-	std::cout << "Ellapsed time: " << difftime(te, tb) << "s" << endl;
+	std::cout << "Ellapsed time: " << (double)(te - ts) / CLOCKS_PER_SEC * 1000. << "ms" << endl;
 
-	time(&tb);
+	ts = clock();
 	while (*(f++) == 'a')
 	{
 		cnb = nb;
@@ -85,9 +92,9 @@ void RoadNetwork::readfromfile(const char* file, float latsr, float lonsr)
 		addArc(p1, p2, t);
 		f++;
 	}
-	time(&te);
+	te = clock();
 	std::cout << m << " arc added." << endl;
-	std::cout << "Ellapsed time: " << difftime(te, tb) << "s" << endl;
+	std::cout << "Ellapsed time: " << (double)(te - ts) / CLOCKS_PER_SEC * 1000. << "ms" << endl;
 }
 
 void RoadNetwork::addVertex(unsigned int id, int lat, int lon)
@@ -103,7 +110,9 @@ bool RoadNetwork::addArc(unsigned int frid, unsigned int toid, int t)
 	Vertex *to = ht.find(toid);
 	if (to == nullptr) return false;
 	fr->neighbors = new Chain<Arc>({ to, t }, fr->neighbors);
+	to->predecessors = new Chain<Arc>({ fr, t }, to->predecessors);
 	m++;
+	if (t > maxt) maxt = t;
 	return true;
 }
 
@@ -115,9 +124,9 @@ int RoadNetwork::Dijkstra(Vertex *sr)
 		return 1;
 	}
 
-	time_t tb, te;
-	std::cout << "Beguinning Dijkstra:" << endl;
-	time(&tb);
+	clock_t ts, te;
+	std::cout << "Beginning Dijkstra:" << endl;
+	ts = clock();
 
 	//Cleaning from last executiion
 	KeyList<struct Vertex, unsigned int> *E = ht.E;
@@ -149,14 +158,24 @@ int RoadNetwork::Dijkstra(Vertex *sr)
 	while (!fh.isEmpty())
 	{
 		Vertex *vmin = fh.ext_min();
-		
-		// Si on est déjà en dehors du cadre de nos recherches, on peut stopper l'exploration
-		if (vmin->t > (targetTime + (!II ? 60000 : 0)))
-			break;
+
+		/* We make the assumption that there are no neighbour points separated by a time superior to an hour
+		(ie that you can not be stuck on a road without being able to change direction for more than 1 hour)
+		Therefore, once we are considering points whose reach time from the source is superior to
+		(the max interesting time for our algorithm) + the max time between two vertices maxt
+		we can exit the loop. */
+		if (vmin->t > (III ? targetTimeHigh : targetTime) + maxt) break;
 
 		vmin->computed = true;
- 		
-		//Processing neighbrs
+
+		// Si on a dépassé targetTimeHigh, alors on marque notre ancêtre qui est à targetTime
+		if (vmin->t >= targetTimeHigh && vmin->IIIancestor!=nullptr)
+		{
+			vmin->IIIancestor->IIIed = true;
+			vmin->IIIancestor = nullptr;			// On stoppe la descendance : l'ancêtre que nous venons de marquer l'est définitivement
+		}
+
+		//Processing neighbors
 		Chain<Arc> *c = vmin->neighbors;
 		while (c != nullptr)
 		{
@@ -164,33 +183,312 @@ int RoadNetwork::Dijkstra(Vertex *sr)
 			//if not in the heap
 			if (!c->var.to->computed)
 			{
-				to->prec = vmin;
-				if (to->myFHc == nullptr) fh.add(to, vmin->t + c->var.t);
+				if (to->myFHc == nullptr)
+				{
+					fh.add(to, vmin->t + c->var.t);
+					to->prec = vmin;
+				}
 				else
 				{
-					int tu = vmin->t + c->var.t;
-					if (tu < to->t)	fh.set_pr(to, tu);
+					unsigned int tu = vmin->t + c->var.t;
+					if (tu < to->t)
+					{
+						to->prec = vmin;
+						fh.set_pr(to, tu);
+					}
 				}
+
+				// Si on est II-ed (c'est à dire situé exactement à targetTime), alors on est candidat pour être III-ed
+				// donc il faut passer à notre descendance un pointeur vers nous
+				if (vmin->IIed)	to->IIIancestor = vmin;
+				// Si on a un ancêtre potentiellement III-able, on doit le passer à notre descendance
+				if (vmin->IIIancestor != nullptr && to->prec == vmin) to->IIIancestor = vmin->IIIancestor;
+
 			}
 
-#if II
-			if (vmin->t < targetTime && to->t >= targetTime)
+			if (to->prec == vmin)
 			{
-				to->IIed = true;
-				to->lat = interpolation(vmin->lat, to->lat, vmin->t, to->t);
-				to->lon = interpolation(vmin->lon, to->lon, vmin->t, to->t);
+				if (vmin->t < targetTime && to->t >= targetTime)
+				{
+					to->IIed = true;
+					to->interLat = interpolation(vmin->lat, to->lat, vmin->t, to->t);
+					to->interLon = interpolation(vmin->lon, to->lon, vmin->t, to->t);
+				}
+				else to->IIed = false;
 			}
-			else to->IIed = false;
-#endif
+
 			c = c->next;
 		}
 	}
 
-	time(&te);
+	te = clock();
 	std::cout << "Dijkstra ended sucessfully!" << endl;
-	std::cout << "Ellapsed time: " << difftime(te, tb) << "s" << endl;
+	std::cout << "Ellapsed time: " << (double)(te - ts) / CLOCKS_PER_SEC * 1000. << "ms" << endl;
 
 	return 0;
+}
+
+Chain<struct Vertex*>* RoadNetwork::computeTout(Vertex *sr)
+{
+	if (sr == 0)
+	{
+		std::cout << "Vertex not found!" << endl;
+		return nullptr;
+	}
+	Chain<struct Vertex*> *Tout = nullptr;
+
+	clock_t ts, te;
+	std::cout << "Beginning Dijkstra:" << endl;
+	ts = clock();
+
+	//Cleaning from last execution
+	KeyList<struct Vertex, unsigned int> *E = ht.E;
+	for (int N = ht.N; N--; E++)
+		for (Chain<struct Entry<struct Vertex, unsigned int>*> *c = E->first; c != nullptr; c = c->next)
+			c->var->value->computed = false;
+
+	//Processing sr
+	this->sr = sr;
+	sr->t = 0;
+	sr->computed = true;
+	sr->IIed = false;
+
+	FibonacciHeap<struct Vertex> fh;
+
+	//Adding first neighbrs
+	Chain<Arc> *c = sr->neighbors;
+	while (c != nullptr)
+	{
+		c->var.to->prec = sr;
+		fh.add(c->var.to, c->var.t);
+		c = c->next;
+	}
+
+	//Generating nodeDeg
+	fh.generate_nodeDeg(ht.n);
+
+	//Main loop
+	while (!fh.isEmpty())
+	{
+		Vertex *vmin = fh.ext_min();
+
+		/* We make the assumption that there are no neighbour points separated by a time superior to an hour
+		(ie that you can not be stuck on a road without being able to change direction for more than 1 hour)
+		Therefore, once we are considering points whose reach time from the source is superior to
+		(the max interesting time for our algorithm) + maxt
+		we can exit the loop. */
+		if (vmin->t > (III ? targetTimeHigh : targetTime) + maxt) break;
+
+		vmin->computed = true;
+		// Si on a dépassé targetTimeHigh, alors on marque notre ancêtre qui est à targetTime
+		// et on le met dans Tout
+		if (vmin->t >= targetTimeHigh && vmin->IIIancestor!=nullptr)
+		{
+			if (!vmin->IIIancestor->IIIed)
+			{
+				Tout = new Chain<struct Vertex *>(vmin->IIIancestor, Tout);
+			}
+			vmin->IIIancestor->IIIed = true;
+			vmin->IIIancestor = nullptr;			// On stoppe la descendance : l'ancêtre que nous venons de marquer l'est définitivement
+
+		}
+
+
+		//Processing neighbors
+		Chain<Arc> *c = vmin->neighbors;
+		while (c != nullptr)
+		{
+			Vertex *to = c->var.to;
+			//if not in the heap
+			if (!c->var.to->computed)
+			{
+				if (to->myFHc == nullptr)
+				{
+					fh.add(to, vmin->t + c->var.t);
+					to->prec = vmin;
+				}
+				else
+				{
+					unsigned int tu = vmin->t + c->var.t;
+					if (tu < to->t)
+					{
+						fh.set_pr(to, tu);
+						to->prec = vmin;
+					}
+				}
+
+				// Si on est II-ed (c'est à dire situé exactement à targetTime), alors on est candidat pour être III-ed
+				// donc il faut passer à notre descendance un pointeur vers nous
+				if (vmin->IIed)	to->IIIancestor = vmin;
+				// Si on a un ancêtre potentiellement III-able, on doit le passer à notre descendance
+				if (vmin->IIIancestor != nullptr && to->prec == vmin) to->IIIancestor = vmin->IIIancestor;
+			}
+
+			if (to->prec == vmin)
+			{
+				if (vmin->t < targetTime && to->t >= targetTime)
+				{
+					to->IIed = true;
+					to->interLat = interpolation(vmin->lat, to->lat, vmin->t, to->t);
+					to->interLon = interpolation(vmin->lon, to->lon, vmin->t, to->t);
+				}
+				else to->IIed = false;
+			}
+
+			c = c->next;
+			}
+		}
+
+	te = clock();
+	std::cout << "Dijkstra ended sucessfully!" << endl;
+	std::cout << "Ellapsed time: " << (double)(te - ts) / CLOCKS_PER_SEC * 1000. << "ms" << endl;
+
+	int nbtest = 0;
+	Chain<struct Vertex*> *d = Tout;
+	while (d != nullptr)
+	{
+		d = d->next;
+		nbtest++;
+	}
+	std::cout << nbtest << endl;
+	return Tout;
+	}
+
+Chain<struct Vertex*>* RoadNetwork::computeSin(Vertex *sr)
+{
+	if (sr == 0)
+	{
+		std::cout << "Vertex not found!" << endl;
+		return nullptr;
+	}
+	Chain<struct Vertex*> *Sin = nullptr;
+
+	clock_t ts, te;
+	std::cout << "Beginning Dijkstra:" << endl;
+	ts = clock();
+
+	//Cleaning from last execution
+	KeyList<struct Vertex, unsigned int> *E = ht.E;
+	for (int N = ht.N; N--; E++)
+		for (Chain<struct Entry<struct Vertex, unsigned int>*> *c = E->first; c != nullptr; c = c->next)
+		{
+			c->var->value->computed = false;
+			c->var->value->IIIancestor = nullptr;
+			c->var->value->IIed = false;
+			c->var->value->IIIed = false;
+			c->var->value->prec = nullptr;
+			c->var->value->t = 0;
+			c->var->value->myFHc = nullptr;
+		}
+
+
+	//Processing sr
+	this->sr = sr;
+	sr->t = 0;
+	sr->computed = true;
+	sr->IIed = false;
+
+	FibonacciHeap<struct Vertex> fh;
+
+	//Adding first neighbrs
+	Chain<Arc> *c = sr->predecessors;
+	while (c != nullptr)
+	{
+		c->var.to->prec = sr;
+		fh.add(c->var.to, c->var.t);
+		c = c->next;
+	}
+
+	//Generating nodeDeg
+	fh.generate_nodeDeg(ht.n);
+
+	//Main loop
+	while (!fh.isEmpty())
+	{
+		Vertex *vmin = fh.ext_min();
+
+		//std::cout << vmin->id << endl;;
+
+		/* We make the assumption that there are no neighbour points separated by a time superior to an hour
+		(ie that you can not be stuck on a road without being able to change direction for more than 1 hour)
+		Therefore, once we are considering points whose reach time from the source is superior to
+		(the max interesting time for our algorithm) + maxt
+		we can exit the loop. */
+		if (vmin->t > (III ? targetTimeHigh : targetTime) + maxt)	break;
+
+		vmin->computed = true;
+		// Si on a dépassé targetTimeHigh, alors on marque notre ancêtre qui est à targetTime
+		// et on le met dans Tout
+		if (vmin->t >= targetTimeHigh && vmin->IIIancestor!=nullptr)
+		{
+			if (!vmin->IIIancestor->IIIed)
+			{
+				Sin = new Chain<struct Vertex*>(vmin->IIIancestor, Sin);
+			}
+			vmin->IIIancestor->IIIed = true;
+			vmin->IIIancestor = nullptr;			// On stoppe la descendance : l'ancêtre que nous venons de marquer l'est définitivement
+
+		}
+
+
+		//Processing neighbors
+		Chain<Arc> *c = vmin->predecessors;
+		while (c != nullptr)
+		{
+			Vertex *to = c->var.to;
+			//if not in the heap
+			if (!c->var.to->computed)
+			{
+
+				if (to->myFHc == nullptr)
+				{
+					fh.add(to, vmin->t + c->var.t);
+					to->prec = vmin;
+				}
+				else
+				{
+					unsigned int tu = vmin->t + c->var.t;
+					if (tu < to->t)
+					{
+						fh.set_pr(to, tu);
+						to->prec = vmin;
+					}
+				}
+
+				// Si on est II-ed (c'est à dire situé exactement à targetTime), alors on est candidat pour être III-ed
+				// donc il faut passer à notre descendance un pointeur vers nous
+				if (vmin->IIed)	to->IIIancestor = vmin;
+				// Si on a un ancêtre potentiellement III-able, on doit le passer à notre descendance
+				if (vmin->IIIancestor != nullptr && to->prec == vmin) to->IIIancestor = vmin->IIIancestor;
+			}
+
+			if (to->prec == vmin)
+			{
+				if (vmin->t < targetTime && to->t >= targetTime)
+				{
+					to->IIed = true;
+					to->interLat = interpolation(vmin->lat, to->lat, vmin->t, to->t);
+					to->interLon = interpolation(vmin->lon, to->lon, vmin->t, to->t);
+				}
+				else to->IIed = false;
+			}
+			c = c->next;
+		}
+	}
+
+	te = clock();
+	std::cout << "Dijkstra ended sucessfully!" << endl;
+	std::cout << "Ellapsed time: " << (double)(te - ts) / CLOCKS_PER_SEC * 1000. << "ms" << endl;
+
+	int nbtest = 0;
+	Chain<struct Vertex*> *d = Sin;
+	while (d != nullptr)
+	{
+		d = d->next;
+		nbtest++;
+	}
+	std::cout << nbtest << endl;
+	return Sin;
 }
 
 int RoadNetwork::hashCode(unsigned int n, int N)
@@ -207,10 +505,14 @@ Vertex *RoadNetwork::select_first_vertex()
 
 Vertex *RoadNetwork::select_vertex_rand()
 {
+	if (ht.n == 0) return nullptr;
 	std::srand((int)time(nullptr));
 	int r = std::rand() % ht.N;
-	KeyList<struct Vertex, unsigned int> *L = ht.E+r;
-	while (!L->n) L++;
+	KeyList<struct Vertex, unsigned int> *L = ht.E + r;
+	while (!L->n)
+	{
+		if (++L == ht.E + ht.N) L = ht.E;
+	}
 	return L->first->var->value;
 }
 
@@ -237,6 +539,7 @@ Vertex *RoadNetwork::select_vertex_coords(int lat, int lon)
 
 void RoadNetwork::printinfile(const char* file)
 {
+	int nbrTargetPoints = 0;
 	std::cout << "Exporting points to file " << file << endl;
 	ofstream myfile;
 	myfile.open(file);
@@ -247,8 +550,13 @@ void RoadNetwork::printinfile(const char* file)
 		for (Chain<struct Entry<struct Vertex, unsigned int>*> *c = E->first; c != nullptr; c = c->next)
 		{
 			Vertex *u = c->var->value;
-			if (!II && ((targetTime - 20000 < u->t && u->t < targetTime + 20000) || (targetTime/2 - 10000 < u->t && u->t < targetTime/2 + 10000)) || II && u->IIed)
-				myfile << "\t[" << (float)u->lat / 1000000 << "," << (float)u->lon / 1000000 << "]," << endl;
+
+			if ((u->IIed && !III) || (u->IIIed && III))
+			{
+				myfile << "\t[" << (float)u->interLat / 1000000 << "," << (float)u->interLon / 1000000 << "]," << endl;
+				nbrTargetPoints++;
+			}
+
 		}
 	}
 	myfile << "];" << endl;
@@ -256,7 +564,9 @@ void RoadNetwork::printinfile(const char* file)
 	myfile << "\t[" << (float)sr->lat / 1000000 << "," << (float)sr->lon / 1000000 << "]" << endl;
 	myfile << ";" << endl;
 	myfile.close();
+	std::cout << nbrTargetPoints << " points are matching our expectations" << endl;
 }
+
 
 
 void RoadNetwork::printroadto(Vertex *to, const char* file)
@@ -266,7 +576,7 @@ void RoadNetwork::printroadto(Vertex *to, const char* file)
 	myfile.open(file);
 	myfile << endl << "var plottedPoints = [" << endl;
 	KeyList<struct Vertex, unsigned int> *E = ht.E;
-	
+
 	while (to != sr)
 	{
 		myfile << "\t[" << (float)to->lat / 1000000 << "," << (float)to->lon / 1000000 << "]," << endl;
@@ -279,10 +589,10 @@ void RoadNetwork::printroadto(Vertex *to, const char* file)
 	myfile.close();
 }
 
-float RoadNetwork::distang(float lata, float lona, float latb, float lonb)
+float RoadNetwork::distang(float lata, float lona, float lats, float lonb)
 {
 #define PI 3.141592
-	return (float)acos(sin(lata*PI / 180)*sin(latb*PI / 180) + cos(lata*PI / 180)*cos(latb*PI / 180)*cos((lonb - lona)*PI / 180));
+	return (float)acos(sin(lata*PI / 180)*sin(lats*PI / 180) + cos(lata*PI / 180)*cos(lats*PI / 180)*cos((lonb - lona)*PI / 180));
 }
 
 int RoadNetwork::interpolation(int c1, int c2, int t1, int t2)

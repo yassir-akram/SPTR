@@ -141,18 +141,22 @@ template<> void FibonacciHeap<struct Vertex>::set_pr(Vertex *el, int p)
 
 		do
 		{
-			cel->marked = false;
-			cel->unlink(cel->father->childs);
+			f = cel->father;
+			cel->unlink(f->childs);
+			f->deg--;
+			cel->father = nullptr;
 			cel->insert(nodes);
 			nbnodes++;
-			f = cel->father;
-			cel->father = nullptr;
-			if (f->deg == cel->deg+1) f->deg--;
-
-			if (!f->marked) { f->marked = true; break; };
-
-			el = f->v;
-		} while (cel->father != nullptr);
+			
+			if (f->father == nullptr) break;
+			if (!f->marked)
+			{
+				f->marked = true;
+				break;
+			}
+			f->marked = false;
+			cel = f;
+		} while (true);
 	}
 }
 
