@@ -130,6 +130,7 @@ bool RoadNetwork::Dijkstra(Vertex *sr, unsigned int Vertex::* t, Chain<struct Ar
 
 	//Processing sr
 	sr->computed = true;
+	sr->*t = 0;
 	if (main)
 	{
 		this->sr = sr;
@@ -245,10 +246,10 @@ Chain<struct Vertex*>* RoadNetwork::computeToutSin(unsigned int TT, unsigned int
 	if (i == j) iTTHpTM = i;
 
 	Chain<struct Vertex*> *Vs = nullptr;
-
+	sr->computed = true;
 	#pragma omp parallel for
-	for (i = iTTHpTM; i >= iTTH; i--)
-		i += ToutSinrec(TT, TTH, SV[i], Vs, t, prec);
+	for (i = iTTH; i <= iTTHpTM; i++)
+		ToutSinrec(TT, TTH, SV[i], Vs, t, prec);
 
 	clean_Vertices();
 	return Vs;
@@ -256,19 +257,18 @@ Chain<struct Vertex*>* RoadNetwork::computeToutSin(unsigned int TT, unsigned int
 
 int RoadNetwork::ToutSinrec(unsigned int& TT, unsigned int& TTH, Vertex* v, Chain<struct Vertex*>*& Vs, unsigned int Vertex::* t, Chain<struct Vertex*>* Vertex::* prec)
 {
-	if (v->*prec == nullptr) return 0;
-	if (v->computed)return 0;
+	if (v->computed) return 0;
 	v->computed = true;
-	int i = 0;
+	int nb = 0;
 	bool fnd = false;
 	Chain<struct Vertex*> *c = v->*prec;
 	do
 	{
-		if (c->var->*t < TT) fnd = true;
-		else if(!c->var->computed) i+= ToutSinrec(TT, TTH, c->var, Vs, t, prec);
+		if (c->var->*t <= TT) fnd = true;
+		else nb += ToutSinrec(TT, TTH, c->var, Vs, t, prec);
 	} while ((c = c->next) != nullptr);
-	if (fnd) { v->computed = true; Vs = new Chain<struct Vertex*>(v, Vs); i++; }
-	return i;
+	if (fnd) { Vs = new Chain<struct Vertex*>(v, Vs); nb++; }
+	return nb;
 	/*while (v->*prec->*t >= TT)
 	{
 		v = v->*prec;
@@ -294,6 +294,7 @@ Chain<struct Vertex*>* RoadNetwork::computeSin(unsigned int TT, unsigned int TTH
 
 unsigned int RoadNetwork::Reach(Vertex* v)
 {
+	if (v->neighbors == nullptr || v->predecessors == nullptr)cout << "FOUND" << endl;
 	clock_t ts, te;
 	ts = clock();
 
@@ -355,7 +356,7 @@ unsigned int RoadNetwork::Reach(Vertex* v)
 string currenttime();
 string currenttime()
 {
-	time_t t = time(nullptr);   // get time now
+	time_t t = time(nullptr);
 	struct tm * now = localtime(&t);
 	string ct;
 	char date[20];
@@ -366,21 +367,20 @@ string currenttime()
 void RoadNetwork::printReach(const char* file, int nb)
 {
 	int nbV = nb;
-	ofstream myfile(file, std::ios_base::app);
+	ofstream myfile;
+	
+	myfile.open(file, std::ios_base::app);
 	if (!myfile.is_open()) return;
-	myfile.open(file);
-	myfile << "Beguinning at " << currenttime()	<< endl << endl;
+	//myfile << "Beguinning at " << currenttime()	<< endl << endl;
 	do
 	{
 		Vertex *v = select_vertex_rand();
 		int A = Reach(v);
 		myfile << v->id << "," << A << endl;
-		nbV++;
 	} while (--nb);
 
-	myfile << endl << "Ended at<< " << currenttime() << endl;
-	myfile << endl << nbV << " vertices computed";
-	myfile << endl << "var centralMarker =" << endl;
+	//myfile << endl << "Ended at " << currenttime() << endl;
+	//myfile << endl << nbV << " vertices computed" << endl;
 	myfile.close();
 }
 

@@ -7,16 +7,15 @@
 
 using namespace std;
 
-template <typename T> int len(Chain<T> *d);
 int main(int argc, char *argv[])
 {
 	if (argc == 1) return 255;
 	const char * rfile = argv[1],	// Input data file
-		*pfile = "reaches.csv";		// Output file
+		*pfile = "C:\\Users\\Yassir\\Downloads\\RoadNetworks\\data\\reaches.csv";		// Output file
 
 	RoadNetwork *rn = new RoadNetwork;
 	rn->readfromfile(rfile);
-	rn->printReach(pfile, 100);
+	rn->printReach(pfile, 1000);
 	delete rn;
 	system("PAUSE");
 	return EXIT_SUCCESS;
