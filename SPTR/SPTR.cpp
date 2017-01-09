@@ -13,11 +13,12 @@ int main(int argc, char *argv[])
 	const char * rfile = argv[1],	// Input data file
 		*pfile = "C:\\Users\\Yassir\\Downloads\\RoadNetworks\\data\\reaches.csv";		// Output file
 
+
+	std::srand((int)time(nullptr));
 	RoadNetwork *rn = new RoadNetwork;
 	rn->readfromfile(rfile);
 	rn->printReach(pfile, 1000);
 	delete rn;
-	system("PAUSE");
 	return EXIT_SUCCESS;
 }
 

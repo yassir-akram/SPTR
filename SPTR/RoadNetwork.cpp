@@ -294,7 +294,8 @@ Chain<struct Vertex*>* RoadNetwork::computeSin(unsigned int TT, unsigned int TTH
 
 unsigned int RoadNetwork::Reach(Vertex* v)
 {
-	if (v->neighbors == nullptr || v->predecessors == nullptr)cout << "FOUND" << endl;
+	if (v->neighbors == nullptr || v->predecessors == nullptr || (v->neighbors->next == nullptr && v->predecessors->next == nullptr && v->neighbors->var.to == v->predecessors->var.to)) return 0;
+	
 	clock_t ts, te;
 	ts = clock();
 
@@ -348,7 +349,7 @@ unsigned int RoadNetwork::Reach(Vertex* v)
 		}
 	}
 	te = clock();
-	cout << "Reach ended! " << TT << "<=r<=" << TTH << endl;
+	std::cout << "Reach ended! " << TT << "<=r<=" << TTH << std::endl;
 	std::cout << "Ellapsed time: " << (double)(te - ts) / CLOCKS_PER_SEC * 1000. << "ms" << endl;
 	return TTH;
 }
@@ -376,7 +377,7 @@ void RoadNetwork::printReach(const char* file, int nb)
 	{
 		Vertex *v = select_vertex_rand();
 		int A = Reach(v);
-		myfile << v->id << "," << A << endl;
+		myfile << v->id << ";" << A << endl;
 	} while (--nb);
 
 	//myfile << endl << "Ended at " << currenttime() << endl;
@@ -402,7 +403,6 @@ Vertex *RoadNetwork::select_first_vertex()
 Vertex *RoadNetwork::select_vertex_rand()
 {
 	if (ht.n == 0) return nullptr;
-	std::srand((int)time(nullptr));
 	int r = std::rand() % ht.N;
 	KeyList<struct Vertex, unsigned int> *L = ht.E + r;
 	while (!L->n)
