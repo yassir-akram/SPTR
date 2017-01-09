@@ -1,9 +1,12 @@
 #include "stdafx.h"
 #include "FHChain.h"
 
-/*FHChain::~FHChain()
+template<> FHChain<struct Vertex*>::~FHChain()
 {
-}*/
+	v->myFHc = nullptr;
+}
+
+template<typename T> FHChain<T>::~FHChain() {}
 
 template <typename T> void FHChain<T>::unlink(FHChain *&from)
 {
@@ -48,3 +51,4 @@ template <typename T> void FHChain<T>::insertaslist(FHChain *&in)
 }
 
 template class FHChain<struct Vertex*>;
+template class FHChain<int*>;
