@@ -17,7 +17,8 @@ int main(int argc, char *argv[])
 	std::srand((int)time(nullptr));
 	RoadNetwork *rn = new RoadNetwork;
 	rn->readfromfile(rfile);
-	rn->printReach(pfile, 1000);
+	rn->Reach(rn->select_vertex_id(830473852));
+	//rn->printReach(pfile, 1000);
 	delete rn;
 	return EXIT_SUCCESS;
 }

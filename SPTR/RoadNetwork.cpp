@@ -111,7 +111,7 @@ bool RoadNetwork::Dijkstra(Vertex *sr, unsigned int Vertex::* t, Chain<struct Ar
 	if (sr == 0)
 	{
 		std::cout << "Vertex not found!" << endl;
-		return true;
+		return false;
 	}
 
 	if (main)
@@ -164,7 +164,15 @@ bool RoadNetwork::Dijkstra(Vertex *sr, unsigned int Vertex::* t, Chain<struct Ar
 		vmin->myFHc = nullptr;
 
 		if (main) SV[++ninCC] = vmin;
-		else if (vmin->*t > TT) break;
+		else
+		{
+			if ((vmin->stopon && vmin->*t == vmin->t + sr->tinv))
+			{
+				clean_Vertices();
+				return true;
+			}
+			if (vmin->*t > TT) break;
+		}
 
 		vmin->computed = true;
 
@@ -306,30 +314,21 @@ unsigned int RoadNetwork::Reach(Vertex* v)
 	Chain<struct Vertex*> *cS;
 	Chain<struct Vertex*> *cT;
 
-	unsigned int TT = 5*60*1000;
-	unsigned int TTH = (unsigned int)(sqrt(2)*5.*60.*1000.);
+	double TT = 7.5*60*1000/2;
+	double TTH = sqrt(2)*7.5*60.*1000./2.;
 	double f = 0;
 	while (true)
 	{
-		Chain<struct Vertex*> *Tout = computeTout(TT, TTH);
-		Chain<struct Vertex*> *Sin = computeSin(TT, TTH);
+		Chain<struct Vertex*> *Tout = computeTout(ceil(TT), ceil(TTH));
+		Chain<struct Vertex*> *Sin = computeSin(ceil(TT), ceil(TTH));
 
-		cS = Sin;
-		while (cS != nullptr)
-		{
-			Vertex *s = cS->var;
-			Dijkstra(s, &Vertex::t2, &Vertex::neighbors, nullptr, SV, ninCC, false, 2 * TT + 2 * maxt);
+		for (cT = Tout; cT != nullptr; cT = cT->next)
+			cT->var->stopon = true;
+		for (cS = Sin; cS != nullptr; cS = cS->next)
+			if (Dijkstra(cS->var, &Vertex::t2, &Vertex::neighbors, nullptr, SV, ninCC, false, ceil(2. * TT) + 2 * maxt)) break;
+		for (cT = Tout; cT != nullptr; cT = cT->next)
+			cT->var->stopon = false;
 
-			cT = Tout;
-			while (cT != nullptr)
-			{
-				Vertex *t = cT->var;
-				if (s->tinv + t->t == t->t2) break;
-				cT = cT->next;
-			}
-			if (cT != nullptr) break;
-			cS = cS->next;
-		}
 		if (Tout != nullptr) Tout->deleterec();
 		if (Sin != nullptr) Sin->deleterec();
 
@@ -339,7 +338,7 @@ unsigned int RoadNetwork::Reach(Vertex* v)
 			TT *= f;
 			TTH *= f;
 			std::cout << "TT=" << TT << " TTH=" << TTH << endl;
-			if (TTH == 0) break;
+			if (TTH < 1) break;
 		}
 		else
 		{
@@ -351,7 +350,63 @@ unsigned int RoadNetwork::Reach(Vertex* v)
 	te = clock();
 	std::cout << "Reach ended! " << TT << "<=r<=" << TTH << std::endl;
 	std::cout << "Ellapsed time: " << (double)(te - ts) / CLOCKS_PER_SEC * 1000. << "ms" << endl;
-	return TTH;
+	return (unsigned int)TTH;
+}
+
+unsigned int RoadNetwork::ReachApprox(Vertex* v)
+{
+	if (v->neighbors == nullptr || v->predecessors == nullptr || (v->neighbors->next == nullptr && v->predecessors->next == nullptr && v->neighbors->var.to == v->predecessors->var.to)) return 0;
+
+	clock_t ts, te;
+	ts = clock();
+
+	Dijkstra(v, &Vertex::t, &Vertex::neighbors, &Vertex::prec, SV, ninCC, true, 0);
+	Dijkstra(v, &Vertex::tinv, &Vertex::predecessors, &Vertex::precinv, SVinv, ninCCinv, true, 0);
+
+	unsigned int tmin = 0, tmax = 8 * 3600 * 1000;
+	Chain<struct Vertex*> *cS;
+	Chain<struct Vertex*> *cT;
+
+	double TT = 7.5 * 60 * 1000 / 2;
+	double TTH = sqrt(2)*7.5*60.*1000. / 2.;
+	double f = 0;
+	while (true)
+	{
+		Chain<struct Vertex*> *Tout = computeTout(ceil(TT), ceil(TTH));
+		Chain<struct Vertex*> *Sin = computeSin(ceil(TT), ceil(TTH));
+
+		for (cT = Tout; cT != nullptr; cT = cT->next)
+			cT->var->stopon = true;
+		for (cS = Sin; cS != nullptr; cS = cS->next)
+			if (Dijkstra(cS->var, &Vertex::t2, &Vertex::neighbors, nullptr, SV, ninCC, false, ceil(2. * TT) + 2 * maxt)) break;
+		for (cT = Tout; cT != nullptr; cT = cT->next)
+			cT->var->stopon = false;
+
+		if (Tout != nullptr) Tout->deleterec();
+		if (Sin != nullptr) Sin->deleterec();
+
+		if (f==0)
+		{
+			if (cS != nullptr) f = sqrt(2);
+			else return (unsigned int)TTH;
+		}
+		if (cS != nullptr)
+		{
+			TT *= f;
+			TTH *= f;
+			std::cout << "TT=" << TT << " TTH=" << TTH << endl;
+			if (TTH == 0) break;
+		}
+		else
+		{
+			TTH *= sqrt(2);
+			break;
+		}
+	}
+	te = clock();
+	std::cout << "Reach ended! " << TT << "<=r<=" << TTH << std::endl;
+	std::cout << "Ellapsed time: " << (double)(te - ts) / CLOCKS_PER_SEC * 1000. << "ms" << endl;
+	return (unsigned int)TTH;
 }
 
 string currenttime();
@@ -376,7 +431,7 @@ void RoadNetwork::printReach(const char* file, int nb)
 	do
 	{
 		Vertex *v = select_vertex_rand();
-		int A = Reach(v);
+		int A = ReachApprox(v);
 		myfile << v->id << ";" << A << endl;
 	} while (--nb);
 
@@ -449,7 +504,7 @@ Vertex *RoadNetwork::select_vertex_nearest(float lat, float lon)
 			}
 		}
 	}
-	return nullptr;
+	return umin;
 }
 
 //void RoadNetwork::printinfile(const char* file)

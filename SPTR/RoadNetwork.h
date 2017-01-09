@@ -27,8 +27,9 @@ struct Vertex
 	unsigned int t, tinv, t2;	// The time it takes to get from the source to this point
 	int lat, lon;
 	bool computed;
+	bool stopon;
 	
-	Vertex(int id, int lat, int lon) : id(id), lat(lat), lon(lon), computed(false), neighbors(nullptr), predecessors(nullptr), myFHc(nullptr), t(0), tinv(0), t2(0), prec(nullptr), precinv(nullptr) {}
+	Vertex(int id, int lat, int lon) : id(id), lat(lat), lon(lon), computed(false), neighbors(nullptr), predecessors(nullptr), myFHc(nullptr), t(0), tinv(0), t2(0), prec(nullptr), precinv(nullptr), stopon(false) {}
 	Vertex() {}
 
 	~Vertex();
@@ -75,6 +76,7 @@ public:
 	Chain<struct Vertex*>* computeTout(unsigned int TT, unsigned int TTH);
 	Chain<struct Vertex*>* computeSin(unsigned int TT, unsigned int TTH);
 	unsigned int Reach(Vertex* v);
+	unsigned int ReachApprox(Vertex* v);
 	void printReach(const char* file, int nb);
 
 	Vertex *select_first_vertex();
