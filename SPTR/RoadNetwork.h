@@ -61,7 +61,7 @@ public:
 	unsigned int maxt;
 	// To show the points that are exactly at targetTime, but on a way to a point at least at targetTimeHigh
 	bool III;
-	RoadNetwork() : n(0), m(0), ht(&hashCode, 1024), targetTime(0), targetTimeHigh(0), III(false), maxt(0), ninCC(0), ninCCinv(0), SV(nullptr), SVinv(nullptr) { };
+	RoadNetwork() : n(0), m(0), ht(&hashCode, 1024), targetTime(0), targetTimeHigh(0), III(false), maxt(0), ninCC(-1), ninCCinv(-1), SV(nullptr), SVinv(nullptr) { };
 	//~RoadNetwork();
 	void readfromfile(const char* file);
 	void addVertex(unsigned int id, int lat, int lon);
